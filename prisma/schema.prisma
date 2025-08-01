@@ -1,0 +1,102 @@
+// ATTOMAX Golf Partner System Database Schema
+// Learn more about Prisma: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Partner {
+  id              String   @id @default(cuid())
+  name            String
+  email           String   @unique
+  domain          String?
+  logoUrl         String?  @map("logo_url")
+  brandName       String   @map("brand_name")
+  commissionRate  Decimal  @map("commission_rate") @db.Decimal(5, 2)
+  status          PartnerStatus @default(PENDING)
+  shopifyTag      String?  @unique @map("shopify_tag")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  orders          Order[]
+  commissionPayments CommissionPayment[]
+
+  @@map("partners")
+}
+
+model Order {
+  id                String   @id @default(cuid())
+  shopifyOrderId    String   @unique @map("shopify_order_id")
+  partnerId         String   @map("partner_id")
+  customerEmail     String   @map("customer_email")
+  totalAmount       Decimal  @map("total_amount") @db.Decimal(10, 2)
+  commissionAmount  Decimal  @map("commission_amount") @db.Decimal(10, 2)
+  commissionStatus  CommissionStatus @default(PENDING) @map("commission_status")
+  orderStatus       String   @map("order_status")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@map("orders")
+}
+
+model Product {
+  id                String        @id @default(cuid())
+  shopifyProductId  String        @unique @map("shopify_product_id")
+  title             String
+  description       String?
+  price             Decimal       @db.Decimal(10, 2)
+  imageUrl          String?       @map("image_url")
+  status            ProductStatus @default(ACTIVE)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@map("products")
+}
+
+model CommissionPayment {
+  id            String   @id @default(cuid())
+  partnerId     String   @map("partner_id")
+  amount        Decimal  @db.Decimal(10, 2)
+  periodStart   DateTime @map("period_start")
+  periodEnd     DateTime @map("period_end")
+  paymentDate   DateTime? @map("payment_date")
+  paymentMethod String?  @map("payment_method")
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  partner Partner @relation(fields: [partnerId], references: [id])
+
+  @@map("commission_payments")
+}
+
+// Enums
+enum PartnerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
